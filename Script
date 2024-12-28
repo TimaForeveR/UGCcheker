@@ -1,0 +1,85 @@
+-- Уведомление о том, что скрипт был заинжектирован
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "Proximity Prompt Item Info";
+    Text = "Monitoring Proximity Prompts...",
+    Duration = 5;
+})
+
+local function sendNotification(title, text, icon)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = title,
+        Text = text,
+        Duration = 15,
+        Icon = icon
+    })
+end
+
+local MarketplaceService = game:GetService("MarketplaceService")
+
+-- Функция для получения информации о товаре, возвращает только ID
+local function getItemInfo(itemId)
+    return itemId
+end
+
+local function showItemInfo(itemId)
+    local info = getItemInfo(itemId)
+    if info then
+        local notificationText = "Item ID: " .. info
+        local iconURL = "rbxthumb://type=Asset&id="..itemId.."&w=420&h=420"
+
+        sendNotification("Item Info", notificationText, iconURL)
+        print("Showed info for item ID: ", itemId)
+    else
+        sendNotification("Error", "Failed to get item ID: " .. itemId, "rbxassetid://13823516052")
+        print("Failed to get item ID for: ", itemId)
+    end
+end
+
+
+local originalPromptPurchaseRequested = MarketplaceService.PromptPurchaseRequested
+local connection
+if typeof(originalPromptPurchaseRequested) == "RBXScriptSignal" then
+    connection = originalPromptPurchaseRequested:Connect(function(player, productId)
+  print("Prompt Purchase Requested for player: ", player.Name, " Product ID: ", productId)
+        if productId then
+            showItemInfo(productId)
+        end
+    end)
+ 
+   -- Добавляем дисконнект
+ game:GetService("Players").LocalPlayer.Chatted:Connect(function(msg)
+  if msg == "stop" then
+   if connection then
+    connection:Disconnect()
+    connection = nil
+    sendNotification("Stopped", "Stopped monitoring prompts", "rbxassetid://13823516052")
+   end
+  end
+ end)
+
+ else
+  sendNotification("Error", "PromptPurchaseRequested is not a valid RBXScriptSignal", "rbxassetid://13823516052")
+ end
+ 
+ 
+local function findAllProximityPrompts()
+    local allPrompts = {}
+    for _, child in ipairs(workspace:GetDescendants()) do
+        if child:IsA("ProximityPrompt") then
+            table.insert(allPrompts, child)
+        end
+    end
+    return allPrompts
+end
+
+local prompts = findAllProximityPrompts()
+if #prompts > 0 then
+ for _, prompt in ipairs(prompts) do
+  prompt.Triggered:Connect(function(player)
+  print("Prompt Triggered by: ", player.Name, " Prompt Name:", prompt.Name)
+    end)
+   end
+  sendNotification("Monitoring Started", "Monitoring Proximity Prompts for item information.", "rbxassetid://13823516052")
+ else
+  sendNotification("No Prompts Found", "No Proximity Prompts were found.", "rbxassetid://13823516052")
+ end
